@@ -11,21 +11,27 @@ namespace ControleFinanceiro.Controllers
     [ApiController]
     public class TransacaoController : ControllerBase
     {
+        private readonly ControleFinanceiroDataContext _context;
+
+        public TransacaoController(ControleFinanceiroDataContext context)
+        {
+            _context = context;
+        }
+
         [HttpGet("transacao")]
         public async Task<IActionResult> GetAsync(
-            [FromServices] ControleFinanceiroDataContext context,
             [FromQuery] int skip = 0, 
             [FromQuery] int take = 25) 
         {
             try
             {
-                var entrada = await context
+                var entrada = await _context
                     .Transacoes
                     .AsNoTracking()
                     .Where(x => x.Tipo == true)
                     .SumAsync(x => x.Valor);
 
-                var saida = await context
+                var saida = await _context
                     .Transacoes
                     .AsNoTracking()
                     .Where(x => x.Tipo == false)
@@ -33,7 +39,7 @@ namespace ControleFinanceiro.Controllers
 
                 double saldo = (entrada - saida);
 
-                var transacoes = await context
+                var transacoes = await _context
                     .Transacoes
                     .AsNoTracking()
                     .Skip(skip * take)
@@ -55,13 +61,11 @@ namespace ControleFinanceiro.Controllers
         }
 
         [HttpGet("transacao/{id}")]
-        public async Task<IActionResult> GetByIdAsync(
-            [FromServices] ControleFinanceiroDataContext context,
-            [FromRoute] Guid id)
+        public async Task<IActionResult> GetByIdAsync([FromRoute] Guid id)
         {
             try
             {
-                var transacao = await context
+                var transacao = await _context
                     .Transacoes
                     .AsNoTracking()
                     .FirstOrDefaultAsync(x => x.Id == id);
@@ -81,9 +85,7 @@ namespace ControleFinanceiro.Controllers
         }
 
         [HttpPost("transacao")]
-        public async Task<IActionResult> PostAsync(
-            [FromBody] CreateTransacaoViewModel model,
-            [FromServices] ControleFinanceiroDataContext context)
+        public async Task<IActionResult> PostAsync([FromBody] CreateTransacaoViewModel model)
         {
             try
             {
@@ -95,8 +97,8 @@ namespace ControleFinanceiro.Controllers
                     Tipo = model.Tipo
                 };
 
-                await context.Transacoes.AddAsync(transacao);
-                await context.SaveChangesAsync();
+                await _context.Transacoes.AddAsync(transacao);
+                await _context.SaveChangesAsync();
 
                 return Created($"transacao{transacao.Id}", new ResultViewModel<Transacao>(transacao));
             }
@@ -113,12 +115,11 @@ namespace ControleFinanceiro.Controllers
         [HttpPut("transacao/{id}")]
         public async Task<IActionResult> PutAsync(
             [FromRoute] Guid id,
-            [FromBody] EditorTransacaoViewModel model,
-            [FromServices] ControleFinanceiroDataContext context)
+            [FromBody] EditorTransacaoViewModel model)
         {
             try
             {
-                var transacao = await context.Transacoes.FirstOrDefaultAsync(x => x.Id == id);
+                var transacao = await _context.Transacoes.FirstOrDefaultAsync(x => x.Id == id);
 
                 if (transacao == null)
                     return NotFound(new ResultViewModel<Transacao>("Conteudo não encontrado"));
@@ -129,8 +130,8 @@ namespace ControleFinanceiro.Controllers
                 transacao.DataCriacao = transacao.DataCriacao;
                 transacao.DataAtualizacao = DateTime.UtcNow;
 
-                context.Transacoes.Update(transacao);
-                await context.SaveChangesAsync();
+                _context.Transacoes.Update(transacao);
+                await _context.SaveChangesAsync();
 
                 return Ok(new ResultViewModel<Transacao>(transacao));
             }
@@ -145,19 +146,17 @@ namespace ControleFinanceiro.Controllers
         }
 
         [HttpDelete("transacao/{id}")]
-        public async Task<IActionResult> DeleteAsync(
-            [FromRoute] Guid id,
-            [FromServices] ControleFinanceiroDataContext context)
+        public async Task<IActionResult> DeleteAsync([FromRoute] Guid id)
         {
             try
             {
-                var transacao = await context.Transacoes.FirstOrDefaultAsync(x => x.Id == id);
+                var transacao = await _context.Transacoes.FirstOrDefaultAsync(x => x.Id == id);
 
                 if (transacao == null)
                     return NotFound(new ResultViewModel<Transacao>("Conteudo não encontrado"));
 
-                context.Transacoes.Remove(transacao);
-                await context.SaveChangesAsync();
+                _context.Transacoes.Remove(transacao);
+                await _context.SaveChangesAsync();
 
                 return Ok(new ResultViewModel<Transacao>(transacao));
             }
